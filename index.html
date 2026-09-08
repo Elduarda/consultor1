@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico Estratégico de Operações de TI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EAEEF2;
+    --paper:#FFFFFF;
+    --ink:#16212B;
+    --ink-soft:#4B5A66;
+    --line:#D6DDE3;
+    --line-soft:#E6EAEE;
+    --accent:#1E5F74;
+    --accent-soft:#DCEAEE;
+    --accent-dark:#123F4D;
+    --crit:#B3452E;
+    --crit-soft:#F6E4DE;
+    --warn:#C98A2E;
+    --warn-soft:#F7EBD8;
+    --good:#2E7D5B;
+    --good-soft:#DFEEE6;
+    --radius:3px;
+    --sidebar-w:288px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    font-size:14.5px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    font-weight:600;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:var(--accent);}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* ---------- shell layout ---------- */
+  #shell{display:flex;min-height:100vh;}
+  #sidebar{
+    width:var(--sidebar-w);
+    flex:0 0 var(--sidebar-w);
+    background:var(--accent-dark);
+    color:#DCE7EA;
+    position:sticky;
+    top:0;
+    height:100vh;
+    overflow-y:auto;
+    padding:22px 0 90px;
+  }
+  #sidebar .brand{
+    padding:0 22px 18px;
+    border-bottom:1px solid rgba(255,255,255,0.12);
+    margin-bottom:10px;
+  }
+  #sidebar .brand .k{font-size:11px;color:#8FB4C0;letter-spacing:.02em;}
+  #sidebar .brand h1{font-size:17px;color:#fff;margin-top:4px;line-height:1.25;}
+  #sidebar .progress-wrap{padding:14px 22px 4px;}
+  #sidebar .progress-bar{height:5px;background:rgba(255,255,255,0.14);border-radius:4px;overflow:hidden;}
+  #sidebar .progress-bar > div{height:100%;background:#7FC7B6;width:0%;transition:width .3s ease;}
+  #sidebar .progress-label{font-size:11.5px;color:#9FC0CA;margin-top:6px;font-family:'IBM Plex Mono',monospace;}
+  #navlist{list-style:none;margin:10px 0 0;padding:0;}
+  #navlist li a{
+    display:flex;gap:10px;align-items:baseline;
+    padding:7px 22px;
+    color:#B9D2D9;
+    text-decoration:none;
+    font-size:13px;
+    border-left:3px solid transparent;
+  }
+  #navlist li a .n{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6E97A2;width:18px;flex:0 0 18px;}
+  #navlist li a .dot{
+    width:6px;height:6px;border-radius:50%;background:#3C6874;flex:0 0 6px;margin-top:5px;
+  }
+  #navlist li a.answered .dot{background:#7FC7B6;}
+  #navlist li a:hover{background:rgba(255,255,255,0.06);color:#fff;}
+  #navlist li a.active{background:rgba(255,255,255,0.1);color:#fff;border-left-color:#7FC7B6;}
+
+  #main{flex:1;min-width:0;}
+  #topbar{
+    position:sticky;top:0;z-index:5;
+    background:rgba(234,238,242,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+    padding:12px 40px;
+    display:flex;justify-content:space-between;align-items:center;gap:16px;
+  }
+  #topbar .ttl{font-size:13px;color:var(--ink-soft);}
+  #topbar .btns{display:flex;gap:10px;}
+  .btn{
+    border:1px solid var(--line);
+    background:var(--paper);
+    color:var(--ink);
+    padding:9px 16px;
+    border-radius:var(--radius);
+    font-size:13px;
+    font-weight:500;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.primary:hover{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
+  .btn.ghost{background:transparent;}
+
+  #content{max-width:880px;margin:0 auto;padding:36px 40px 140px;}
+
+  .intro{
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px 26px;margin-bottom:34px;
+  }
+  .intro p{margin:0 0 8px;color:var(--ink-soft);}
+  .intro p:last-child{margin-bottom:0;}
+
+  section.card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    margin-bottom:22px;
+    scroll-margin-top:70px;
+  }
+  section.card > .head{
+    padding:20px 26px 16px;
+    border-bottom:1px solid var(--line-soft);
+    display:flex;gap:14px;align-items:flex-start;
+  }
+  section.card > .head .num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;color:#9AAAB4;
+    padding-top:3px;
+    width:26px;flex:0 0 26px;
+  }
+  section.card > .head h2{font-size:18px;}
+  section.card > .head .obj{font-size:12.5px;color:var(--ink-soft);margin-top:5px;}
+  section.card > .body{padding:18px 26px 24px;}
+
+  .q{margin-bottom:16px;}
+  .q:last-child{margin-bottom:0;}
+  .q label.qlabel{display:block;font-size:13.5px;font-weight:500;color:var(--ink);margin-bottom:6px;}
+  .q .hint{font-size:11.5px;color:#8B99A2;margin-top:4px;}
+
+  input[type=text],input[type=number],textarea,select{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:9px 11px;
+    font-family:inherit;
+    font-size:13.5px;
+    color:var(--ink);
+    background:#FCFDFE;
+  }
+  input[type=text]:focus,input[type=number]:focus,textarea:focus,select:focus{
+    outline:none;border-color:var(--accent);background:#fff;
+  }
+  textarea{resize:vertical;min-height:56px;}
+  .unit-wrap{position:relative;max-width:160px;}
+  .unit-wrap input{padding-right:28px;}
+  .unit-wrap span{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:#8B99A2;font-size:12.5px;}
+
+  .seg{display:flex;gap:8px;flex-wrap:wrap;}
+  .seg button.opt{
+    border:1px solid var(--line);background:#FCFDFE;color:var(--ink-soft);
+    padding:7px 14px;border-radius:20px;font-size:13px;
+  }
+  .seg button.opt.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .seg.bool button.opt.sel.yes{background:var(--good);border-color:var(--good);}
+  .seg.bool button.opt.sel.no{background:var(--crit);border-color:var(--crit);}
+
+  .scale5{display:flex;gap:6px;}
+  .scale5 button.sopt{
+    flex:1;border:1px solid var(--line);background:#FCFDFE;
+    padding:8px 4px;border-radius:var(--radius);font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft);
+    text-align:center;
+  }
+  .scale5 button.sopt.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .scale-legend{display:flex;justify-content:space-between;font-size:10.5px;color:#93A2AC;margin-top:4px;}
+
+  .checks{display:flex;flex-wrap:wrap;gap:8px 18px;}
+  .checks label{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-soft);}
+  .checks input{width:auto;}
+
+  .scalegroup{
+    margin-top:20px;padding-top:18px;border-top:1px dashed var(--line);
+  }
+  .scalegroup > .gt{font-size:12px;text-transform:none;color:var(--ink-soft);font-weight:600;margin-bottom:12px;}
+  .scalegroup .q{margin-bottom:14px;}
+
+  table.dyn{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px;}
+  table.dyn th{
+    text-align:left;font-weight:600;font-size:11.5px;color:var(--ink-soft);
+    padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  table.dyn td{padding:5px 6px;vertical-align:top;border-bottom:1px solid var(--line-soft);}
+  table.dyn td input,table.dyn td select{padding:6px 8px;font-size:12.5px;}
+  table.dyn .rm{background:none;border:none;color:#B3452E;font-size:16px;padding:4px 8px;}
+  .addrow{margin-top:10px;}
+  .addrow button{font-size:12.5px;padding:7px 12px;}
+
+  .kpi-table{width:100%;border-collapse:collapse;font-size:12.8px;}
+  .kpi-table th{text-align:left;font-size:11px;color:var(--ink-soft);padding:6px 8px;border-bottom:1px solid var(--line);}
+  .kpi-table td{padding:5px 6px;border-bottom:1px solid var(--line-soft);}
+  .kpi-table td:first-child{color:var(--ink);font-weight:500;width:26%;}
+  .kpi-table td input{padding:6px 8px;font-size:12.5px;}
+
+  /* section 19 dashboard */
+  .score-hero{
+    display:flex;align-items:center;gap:26px;background:var(--accent-dark);color:#fff;
+    border-radius:var(--radius);padding:24px 28px;margin-bottom:20px;
+  }
+  .score-hero .num{font-family:'IBM Plex Mono',monospace;font-size:46px;font-weight:600;line-height:1;}
+  .score-hero .lbl{font-size:12.5px;color:#B9D2D9;margin-top:6px;}
+  .score-hero .desc{font-size:13px;color:#DCE7EA;max-width:480px;}
+  .bars{display:flex;flex-direction:column;gap:10px;}
+  .bar-row{display:grid;grid-template-columns:150px 1fr 60px;gap:12px;align-items:center;}
+  .bar-row .l{font-size:12.5px;color:var(--ink-soft);}
+  .bar-track{height:9px;background:var(--line-soft);border-radius:5px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:5px;}
+  .bar-row .v{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--ink-soft);}
+  .lvl1{background:var(--crit);} .lvl2{background:#C1704A;} .lvl3{background:var(--warn);} .lvl4{background:#6FA37E;} .lvl5{background:var(--good);}
+
+  .rankbox{background:var(--warn-soft);border:1px solid #EAD3A2;border-radius:var(--radius);padding:16px 20px;margin-top:20px;}
+  .rankbox h3{font-size:13px;margin-bottom:10px;}
+  .rankbox ol{margin:0;padding-left:18px;font-size:13px;}
+  .rankbox li{margin-bottom:5px;}
+
+  /* plan buckets */
+  .plan-bucket{margin-bottom:22px;}
+  .plan-bucket h3{font-size:14.5px;margin-bottom:3px;}
+  .plan-bucket .sub{font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
+
+  .tag{display:inline-block;font-size:10.5px;font-family:'IBM Plex Mono',monospace;padding:2px 7px;border-radius:10px;}
+  .tag.crit{background:var(--crit-soft);color:var(--crit);}
+  .tag.warn{background:var(--warn-soft);color:var(--warn);}
+  .tag.good{background:var(--good-soft);color:var(--good);}
+
+  .summary-block{margin-bottom:18px;}
+  .summary-block h3{font-size:13px;color:var(--accent-dark);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--line-soft);}
+  .summary-block .txt{font-size:13.5px;color:var(--ink);white-space:pre-line;}
+  #summaryOut:empty::before{content:"Clique em “Gerar diagnóstico” para compor o resumo executivo com base nas respostas preenchidas.";color:#93A2AC;font-size:13px;}
+
+  .placeholder-note{font-size:12.5px;color:#93A2AC;font-style:italic;}
+
+  footer.foot{max-width:880px;margin:0 auto;padding:0 40px 60px;color:#93A2AC;font-size:11.5px;}
+
+  @media (max-width:900px){
+    #sidebar{display:none;}
+    #content{padding:24px 18px 120px;}
+    #topbar{padding:10px 18px;}
+  }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <nav id="sidebar">
+    <div class="brand">
+      <div class="k">CONSULTORIA DE OPERAÇÕES DE TI</div>
+      <h1>Diagnóstico Estratégico<br>de Operações de TI</h1>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div id="progFill"></div></div>
+      <div class="progress-label"><span id="progPct">0%</span> preenchido · <span id="progAns">0</span> respostas</div>
+    </div>
+    <ul id="navlist"></ul>
+  </nav>
+
+  <div id="main">
+    <div id="topbar">
+      <div class="ttl">Reunião de diagnóstico &middot; preenchimento ao vivo</div>
+      <div class="btns">
+        <button class="btn ghost" id="btnClear">Limpar</button>
+        <button class="btn" id="btnGenerate">Gerar diagnóstico</button>
+        <button class="btn primary" id="btnDownload">Baixar relatório (.html)</button>
+      </div>
+    </div>
+
+    <div id="content">
+      <div class="intro">
+        <p><strong>Como preencher:</strong> nenhuma pergunta é obrigatória — quando uma informação não existir ou não for medida na empresa, deixe em branco ou registre "Não mensurado". O formulário calcula automaticamente a maturidade da operação, prioriza os problemas e monta um plano de ação de 90 dias a partir do que for respondido.</p>
+        <p>Ao final, use <strong>Gerar diagnóstico</strong> para compor o resumo executivo e <strong>Baixar relatório (.html)</strong> para exportar um arquivo autônomo com todas as respostas e a análise, pronto para apresentar à liderança.</p>
+      </div>
+
+      <div id="sections"></div>
+    </div>
+
+    <footer class="foot">Diagnóstico Estratégico de Operações de TI — ferramenta de apoio à consultoria. As análises e o plano de ação são gerados a partir das respostas informadas nesta sessão; nada é inferido além do que foi preenchido.</footer>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DATA MODEL
+   ============================================================ */
+const answers = {}; // key -> value (string | array | table rows)
+let reportGenerated = false;
+
+function Q(key,label,type,opts){ return {key,label,type,opts:opts||{}}; }
+
+const YESNO = ['Sim','Não'];
+const SCALE_LABELS = ['1 · Inexistente / crítico','2 · Inicial','3 · Parcial','4 · Estruturado','5 · Otimizado'];
+
+/* ---- maturity category registry, filled while building sections ---- */
+const MATURITY_CATS = [
+  {key:'governanca',   label:'Governança',              ids:['g_resp','g_org','g_gov','g_plan','g_risco']},
+  {key:'servicedesk',  label:'Service Desk',             ids:['sd_qual','sd_vel','sd_org','sd_cap','sd_sat']},
+  {key:'itsm',         label:'ITSM (processos)',         ids:['proc_incident','proc_request','proc_problem','proc_change','proc_knowledge','proc_asset','proc_config','proc_slm','proc_monitoring','proc_capacity','proc_availability','proc_continuity']},
+  {key:'infra',        label:'Infraestrutura',           ids:['infra_disp','infra_cap','infra_mon','infra_red','infra_doc']},
+  {key:'noc',          label:'NOC / Monitoramento',      ids:['noc_maturidade']},
+  {key:'incidentes',   label:'Incidentes',               ids:['proc_incident']},
+  {key:'problemas',    label:'Problemas',                ids:['proc_problem']},
+  {key:'mudancas',     label:'Mudanças',                 ids:['mud_controle','mud_doc','mud_risco','mud_com','mud_sucesso']},
+  {key:'backup',       label:'Backup',                   ids:['bkp_confiab','bkp_recup','bkp_seg','bkp_doc','bkp_cont']},
+  {key:'continuidade', label:'Continuidade',             ids:['proc_continuity']},
+  {key:'seguranca',    label:'Segurança',                ids:['seg_acesso','seg_endpoint','seg_rede','seg_vuln','seg_mon','seg_resp']},
+  {key:'documentacao', label:'Documentação',             ids:['doc_disp','doc_qual','doc_atual','doc_facil']},
+  {key:'fornecedores', label:'Gestão de fornecedores',   ids:['forn_maturidade']},
+  {key:'indicadores',  label:'Indicadores',              ids:['kpi_maturidade']},
+  {key:'equipe',       label:'Gestão da equipe',         ids:['eq_cap','eq_conhec','eq_org','eq_prod','eq_dep']},
+];
+
+const PROCESSES = [
+  ['proc_incident','Incident Management'],['proc_request','Request Management'],
+  ['proc_problem','Problem Management'],['proc_change','Change Management'],
+  ['proc_knowledge','Knowledge Management'],['proc_asset','Asset Management'],
+  ['proc_config','Configuration Management'],['proc_slm','Service Level Management'],
+  ['proc_monitoring','Monitoring'],['proc_capacity','Capacity Management'],
+  ['proc_availability','Availability Management'],['proc_continuity','Continuity Management'],
+];
+
+const INDICATORS = [
+  'Volume de chamados','Backlog','SLA (%)','Tempo médio de resposta','Tempo médio de resolução',
+  'First Call Resolution','CSAT','Incidentes críticos','Incidentes recorrentes','Disponibilidade',
+  'Uptime','Falhas de backup','Sucesso dos backups','Mudanças realizadas','Mudanças com falha',
+  'Tempo de indisponibilidade','Alertas de monitoramento','Vulnerabilidades abertas','Patches pendentes',
+  'Capacidade utilizada','Incidentes de segurança'
+];
+
+/* ============================================================
+   SECTION DEFINITIONS
+   ============================================================ */
+const SECTIONS = [
+{num:1, id:'s1', title:'Contexto da Organização', obj:'Entender o contexto da empresa e da área de TI.',
+  items:[
+    Q('empresa_nome','Nome da empresa','text'),
+    Q('segmento','Segmento de atuação','text'),
+    Q('colaboradores','Número aproximado de colaboradores','number'),
+    Q('unidades','Número de unidades / filiais','number'),
+    Q('usuarios_ti','Quantidade de usuários atendidos pela TI','number'),
+    Q('estrutura_atual','Estrutura atual da área de TI','textarea'),
+    Q('qtd_prof_ti','Quantidade de profissionais de TI','number'),
+    Q('ti_organizada','Como a TI está organizada atualmente?','textarea'),
+    Q('resp_ti','Quais são as principais responsabilidades da TI?','textarea'),
+    Q('maiores_desafios','Quais são hoje os maiores desafios da área de TI?','textarea'),
+    Q('objetivo_12m','Qual é o principal objetivo da organização para a TI nos próximos 12 meses?','textarea'),
+  ]},
+{num:2, id:'s2', title:'Estrutura e Governança de TI', obj:'Avaliar como a área está estruturada e gerenciada.',
+  items:[
+    Q('resp_formal','Existe um responsável formal pela gestão de TI?','bool'),
+    Q('organograma','Existe organograma da área?','bool'),
+    Q('resp_definidas','As responsabilidades de cada profissional estão claramente definidas?','bool'),
+    Q('processos_formalizados','Existem processos formalizados?','bool'),
+    Q('politicas_ti','Existem políticas de TI?','bool'),
+    Q('planej_estrategico','Existe planejamento estratégico de TI?','bool'),
+    Q('orcamento_definido','Existe orçamento definido para TI?','bool'),
+    Q('prioridades_como','Como as prioridades da TI são definidas?','textarea'),
+    Q('gestao_riscos_bin','Existe gestão de riscos de TI?','bool'),
+    Q('gestao_fornecedores_bin','Existe gestão de fornecedores?','bool'),
+    Q('reunioes_periodicas','Existem reuniões periódicas de acompanhamento da operação?','bool'),
+  ],
+  scaleGroup:{label:'Avaliar de 1 a 5', items:[
+    Q('g_resp','Clareza de responsabilidades','scale'), Q('g_org','Organização da equipe','scale'),
+    Q('g_gov','Governança','scale'), Q('g_plan','Planejamento','scale'), Q('g_risco','Gestão de riscos','scale'),
+  ]}},
+{num:3, id:'s3', title:'Service Desk e Atendimento', obj:'Avaliar a eficiência do atendimento aos usuários.',
+  items:[
+    Q('sd_estruturado','Existe Service Desk estruturado?','bool'),
+    Q('sd_ferramenta','Qual ferramenta é utilizada para gerenciamento de chamados?','text'),
+    Q('sd_canais','Quais canais os usuários utilizam para solicitar suporte?','multi',{options:['Telefone','E-mail','Portal / sistema','WhatsApp / chat','Presencial','Outro']}),
+    Q('sd_catalogo','Existe catálogo de serviços?','bool'),
+    Q('sd_classificacao','Existe classificação / priorização dos chamados?','bool'),
+    Q('sd_filas','Existem filas ou grupos de atendimento?','bool'),
+    Q('sd_triagem','Existe triagem dos chamados?','bool'),
+    Q('sd_escalonamento','Existe escalonamento?','bool'),
+    Q('sd_encerramento','Existe processo formal de encerramento?','bool'),
+    Q('sd_pesquisa','Existe pesquisa de satisfação?','bool'),
+    Q('sd_volume','Qual o volume médio de chamados por mês?','number'),
+    Q('sd_backlog','Quantos chamados estão atualmente em backlog?','number'),
+    Q('sd_tma','Qual o tempo médio de atendimento?','text'),
+    Q('sd_tmr','Qual o tempo médio de resolução?','text'),
+    Q('sd_fcr','Qual percentual dos chamados é resolvido no primeiro atendimento?','percent'),
+    Q('sd_tipos','Quais são os principais tipos de chamados?','textarea'),
+  ],
+  scaleGroup:{label:'Avaliar de 1 a 5', items:[
+    Q('sd_qual','Qualidade do atendimento','scale'), Q('sd_vel','Velocidade','scale'),
+    Q('sd_org','Organização','scale'), Q('sd_cap','Capacidade da equipe','scale'), Q('sd_sat','Satisfação dos usuários','scale'),
+  ]}},
+{num:4, id:'s4', title:'SLA, OLA e Nível de Serviço', obj:'Identificar se existem metas e controles formais de atendimento.',
+  items:[
+    Q('sla_definidos','Existem SLAs definidos?','bool'),
+    Q('sla_documentados','Os SLAs estão documentados?','bool'),
+    Q('sla_por_prioridade','Existem diferentes SLAs por prioridade?','bool'),
+    Q('sla_acordados','Os SLAs são acordados com as áreas / clientes?','bool'),
+    Q('sla_monitorados','Os SLAs são monitorados?','bool'),
+    Q('sla_percentual','Qual percentual dos chamados está dentro do SLA?','percent'),
+    Q('sla_violacoes','Existem violações recorrentes?','bool'),
+    Q('sla_causas','Quais são as principais causas das violações?','textarea'),
+    Q('ola_internas','Existem OLAs entre as equipes internas?','bool'),
+    Q('sla_tratamento','Existe processo para tratamento de violações de SLA?','bool'),
+    Q('sla_resp','SLA de resposta','text'),
+    Q('sla_resol','SLA de resolução','text'),
+    Q('meta_disp','Meta de disponibilidade','text'),
+    Q('meta_atend','Meta de atendimento','text'),
+    Q('perc_cumprimento','Percentual atual de cumprimento','percent'),
+  ]},
+{num:5, id:'s5', title:'Infraestrutura', obj:'Avaliar a maturidade da infraestrutura tecnológica.',
+  items:[
+    Q('infra_tipo','A infraestrutura é predominantemente on-premises, cloud ou híbrida?','select',{options:['On-premises','Cloud','Híbrida']}),
+    Q('infra_tecnologias','Quais tecnologias principais são utilizadas?','textarea'),
+    Q('inv_servidores','Existe inventário atualizado de servidores?','bool'),
+    Q('inv_ativos','Existe inventário de ativos?','bool'),
+    Q('doc_infra_bin','Existe documentação da infraestrutura?','bool'),
+    Q('infra_mon_bin','Existe monitoramento?','bool'),
+    Q('infra_ferramentas_mon','Quais ferramentas são utilizadas para monitoramento?','text'),
+    Q('infra_alertas_auto','Existem alertas automatizados?','bool'),
+    Q('infra_problemas_disp','Existem problemas recorrentes de disponibilidade?','bool'),
+    Q('infra_gargalos_cap','Existem gargalos de capacidade?','bool'),
+    Q('infra_plan_cap','Existe planejamento de capacidade?','bool'),
+    Q('infra_redundancia','Existe redundância para componentes críticos?','bool'),
+    Q('infra_spof','Existem pontos únicos de falha?','bool'),
+    Q('infra_trat_incid','Como são tratados incidentes de infraestrutura?','textarea'),
+    Q('infra_contingencia','Existe ambiente de contingência?','bool'),
+  ],
+  scaleGroup:{label:'Avaliar de 1 a 5', items:[
+    Q('infra_disp','Disponibilidade','scale'), Q('infra_cap','Capacidade','scale'),
+    Q('infra_mon','Monitoramento','scale'), Q('infra_red','Redundância','scale'), Q('infra_doc','Documentação','scale'),
+  ]}},
+{num:6, id:'s6', title:'NOC e Monitoramento', obj:'Caso exista NOC ou operação de monitoramento, avaliar sua maturidade.',
+  items:[
+    Q('noc_existe','Existe NOC?','bool'),
+    Q('noc_horario','Qual é o horário de operação?','text'),
+    Q('noc_24x7','O monitoramento é 24x7?','bool'),
+    Q('noc_o_que','O que é monitorado?','textarea'),
+    Q('noc_ind_disp','Existem indicadores de disponibilidade?','bool'),
+    Q('noc_alertas_criticos_bin','Existem alertas críticos definidos?','bool'),
+    Q('noc_escalonamento','Existe processo de escalonamento?','bool'),
+    Q('noc_procedimento','Existe procedimento para cada tipo de alerta?','bool'),
+    Q('noc_falsos_pos','Existem falsos positivos?','bool'),
+    Q('noc_excesso','Existe excesso de alertas?','bool'),
+    Q('noc_cobertura','O que está sob monitoramento?','multi',{options:['Servidores','Rede','Aplicações','Banco de dados','Backup','Segurança','Links','Cloud']}),
+    Q('noc_alertas_dia','Quantos alertas são gerados por dia?','number'),
+    Q('noc_alertas_criticos_qtd','Quantos são considerados críticos?','number'),
+    Q('noc_perc_gera_incidente','Qual percentual dos alertas gera incidente?','percent'),
+    Q('noc_tempo_identificar','Tempo médio para identificar uma falha','text'),
+    Q('noc_tempo_responder','Tempo médio para responder','text'),
+    Q('noc_tempo_resolver','Tempo médio para resolver','text'),
+  ],
+  scaleGroup:{label:'Autoavaliação de maturidade', items:[
+    Q('noc_maturidade','Maturidade geral do NOC / Monitoramento','scale'),
+  ]}},
+{num:7, id:'s7', title:'Incidentes e Problemas', obj:'Avaliar a maturidade de Incident Management e Problem Management.',
+  items:[
+    Q('inc_processo_formal','Existe processo formal de gerenciamento de incidentes?','bool'),
+    Q('inc_classificacao','Existe classificação por impacto e urgência?','bool'),
+    Q('inc_matriz','Existe matriz de prioridade?','bool'),
+    Q('inc_escalonamento','Existe processo de escalonamento?','bool'),
+    Q('inc_comunicacao','Existe comunicação durante incidentes críticos?','bool'),
+    Q('inc_sala_crise','Existe sala de crise?','bool'),
+    Q('inc_registro','Existe registro de incidentes críticos?','bool'),
+    Q('inc_rca','É realizado RCA após incidentes relevantes?','bool'),
+    Q('prob_mgmt','Existe Problem Management?','bool'),
+    Q('prob_identificados','Problemas recorrentes são identificados?','bool'),
+    Q('prob_rca','Existe análise de causa raiz?','bool'),
+    Q('prob_plano','Existe plano de ação para evitar recorrência?','bool'),
+    Q('inc_qtd_criticos_mes','Número de incidentes críticos por mês','number'),
+    Q('inc_qtd_recorrentes','Número de incidentes recorrentes','number'),
+    Q('inc_principais_3m','Principais incidentes dos últimos 3 meses','textarea'),
+    Q('inc_principais_causas','Principais causas identificadas','textarea'),
+  ]},
+{num:8, id:'s8', title:'Mudanças e Projetos', obj:'Avaliar o Change Management.',
+  items:[
+    Q('mud_processo_formal','Existe processo formal de gestão de mudanças?','bool'),
+    Q('mud_registradas','As mudanças são registradas?','bool'),
+    Q('mud_aprovacao','Existe aprovação?','bool'),
+    Q('mud_analise_risco','Existe análise de risco?','bool'),
+    Q('mud_janela','Existe janela de mudança?','bool'),
+    Q('mud_rollback','Existe plano de rollback?','bool'),
+    Q('mud_validacao','Existe validação após a mudança?','bool'),
+    Q('mud_emergenciais','Existem mudanças emergenciais?','bool'),
+    Q('mud_geram_incidentes','Quantas mudanças geram incidentes?','percent'),
+    Q('mud_calendario','Existe calendário de mudanças?','bool'),
+  ],
+  scaleGroup:{label:'Avaliar de 1 a 5', items:[
+    Q('mud_controle','Controle','scale'), Q('mud_doc','Documentação','scale'), Q('mud_risco','Gestão de risco','scale'),
+    Q('mud_com','Comunicação','scale'), Q('mud_sucesso','Taxa de sucesso das mudanças','scale'),
+  ]}},
+{num:9, id:'s9', title:'Backup e Continuidade', obj:'Avaliar a proteção de dados e a capacidade de recuperação.',
+  items:[
+    Q('bkp_politica','Existe política de backup?','bool'),
+    Q('bkp_o_que','O que é protegido?','textarea'),
+    Q('bkp_ferramenta','Qual ferramenta é utilizada?','text'),
+    Q('bkp_frequencia','Qual a frequência dos backups?','text'),
+    Q('bkp_retencao','Existe retenção definida?','bool'),
+    Q('bkp_offsite','Existe cópia off-site?','bool'),
+    Q('bkp_imutavel','Existe backup imutável?','bool'),
+    Q('bkp_monitoramento','Existe monitoramento dos jobs?','bool'),
+    Q('bkp_falhas','Existem falhas recorrentes?','bool'),
+    Q('bkp_testados','Os backups são testados?','bool'),
+    Q('bkp_ultimo_teste','Quando foi realizado o último teste de restauração?','text'),
+    Q('dr_plano','Existe plano de Disaster Recovery?','bool'),
+    Q('bcp_plano','Existe BCP?','bool'),
+    Q('rto_rpo','Existem RTO e RPO definidos?','bool'),
+    Q('bkp_responsaveis','Os responsáveis estão definidos?','bool'),
+  ],
+  scaleGroup:{label:'Avaliar de 1 a 5', items:[
+    Q('bkp_confiab','Confiabilidade do backup','scale'), Q('bkp_recup','Capacidade de recuperação','scale'),
+    Q('bkp_seg','Segurança','scale'), Q('bkp_doc','Documentação','scale'), Q('bkp_cont','Continuidade','scale'),
+  ]}},
+{num:10, id:'s10', title:'Segurança da Informação', obj:'Avaliar os principais controles de segurança operacional.',
+  items:[
+    Q('seg_politica','Existe política de segurança da informação?','bool'),
+    Q('seg_controle_acesso','Existe controle de acesso?','bool'),
+    Q('seg_mfa','Existe MFA?','bool'),
+    Q('seg_gestao_id','Existe gestão de identidades?','bool'),
+    Q('seg_revisao_acessos','Existe revisão periódica de acessos?','bool'),
+    Q('seg_antivirus','Existe antivírus / EDR?','bool'),
+    Q('seg_firewall','Existe firewall?','bool'),
+    Q('seg_gestao_vuln','Existe gestão de vulnerabilidades?','bool'),
+    Q('seg_patch','Existe atualização / patch management?','bool'),
+    Q('seg_monitoramento_bin','Existe monitoramento de segurança?','bool'),
+    Q('seg_resposta_bin','Existe processo de resposta a incidentes?','bool'),
+    Q('seg_testes','Existem testes de segurança?','bool'),
+    Q('seg_conscientizacao','Existe conscientização dos usuários?','bool'),
+    Q('seg_riscos_conhecidos','Existem riscos de segurança conhecidos atualmente?','textarea'),
+  ],
+  scaleGroup:{label:'Avaliar de 1 a 5', items:[
+    Q('seg_acesso','Controle de acesso','scale'), Q('seg_endpoint','Endpoint','scale'), Q('seg_rede','Rede','scale'),
+    Q('seg_vuln','Vulnerabilidades','scale'), Q('seg_mon','Monitoramento','scale'), Q('seg_resp','Resposta a incidentes','scale'),
+  ]}},
+{num:11, id:'s11', title:'Processos e ITSM', obj:'Avaliar a maturidade dos processos de TI.', special:'itsm',
+  items:[
+    Q('proc_mais_melhoria','Quais processos mais precisam de melhoria?','textarea'),
+    Q('proc_dependem_pessoas','Quais processos dependem excessivamente de pessoas?','textarea'),
+    Q('proc_manuais','Quais processos ainda são realizados manualmente?','textarea'),
+    Q('proc_retrabalho','Quais processos geram mais retrabalho?','textarea'),
+  ]},
+{num:12, id:'s12', title:'Equipe e Capacidade Operacional', obj:'Avaliar pessoas, carga de trabalho e organização.',
+  items:[
+    Q('eq_qtd_pessoas','Quantas pessoas fazem parte da operação?','number'),
+    Q('eq_distribuicao','Como estão distribuídas por função?','textarea'),
+    Q('eq_sobrecarregados','Existem profissionais sobrecarregados?','bool'),
+    Q('eq_funcoes_criticas','Existem funções críticas dependentes de uma única pessoa?','bool'),
+    Q('eq_gaps_conhecimento','Existem gaps de conhecimento?','bool'),
+    Q('eq_treinamento','Existe treinamento periódico?','bool'),
+    Q('eq_doc_atividades','Existe documentação das atividades?','bool'),
+    Q('eq_escala_plantao','Existe escala de plantão?','bool'),
+    Q('eq_problemas_cobertura','Existem problemas de cobertura?','bool'),
+    Q('eq_banco_horas','Existe banco de horas?','bool'),
+    Q('eq_acompanhamento_prod','Existe acompanhamento de produtividade?','bool'),
+    Q('eq_avaliacao_perf','Como a performance da equipe é avaliada?','textarea'),
+  ],
+  scaleGroup:{label:'Avaliar de 1 a 5', items:[
+    Q('eq_cap','Capacidade','scale'), Q('eq_conhec','Conhecimento','scale'), Q('eq_org','Organização','scale'),
+    Q('eq_prod','Produtividade','scale'), Q('eq_dep','Dependência de pessoas','scale'),
+  ]}},
+{num:13, id:'s13', title:'Documentação e Base de Conhecimento', obj:'Avaliar a documentação operacional disponível.',
+  items:[
+    Q('doc_infra_exist','Existe documentação da infraestrutura?','bool'),
+    Q('doc_procedimentos','Existem procedimentos operacionais?','bool'),
+    Q('doc_runbooks','Existem runbooks?','bool'),
+    Q('doc_base_conhec','Existe base de conhecimento?','bool'),
+    Q('doc_chamados_recorrentes','Os chamados recorrentes possuem documentação?','bool'),
+    Q('doc_troubleshooting','Existe documentação de troubleshooting?','bool'),
+    Q('doc_ambientes_criticos','Existe documentação de ambientes críticos?','bool'),
+    Q('doc_atualizada_bin','A documentação é atualizada?','bool'),
+    Q('doc_responsavel','Existe responsável pela manutenção?','bool'),
+  ],
+  scaleGroup:{label:'Avaliar de 1 a 5', items:[
+    Q('doc_disp','Disponibilidade','scale'), Q('doc_qual','Qualidade','scale'),
+    Q('doc_atual','Atualização','scale'), Q('doc_facil','Facilidade de acesso','scale'),
+  ]}},
+{num:14, id:'s14', title:'Fornecedores e Terceiros', obj:'Mapear a dependência de fornecedores críticos.', special:'fornecedores',
+  items:[
+    Q('forn_servicos_terc','Quais serviços de TI são terceirizados?','textarea'),
+    Q('forn_criticos','Quais fornecedores são críticos?','textarea'),
+    Q('forn_contratos','Existem contratos formalizados?','bool'),
+    Q('forn_slas','Existem SLAs com fornecedores?','bool'),
+    Q('forn_avaliados','Os fornecedores são avaliados?','bool'),
+    Q('forn_problemas_rec','Existem problemas recorrentes com fornecedores?','bool'),
+    Q('forn_dependencias','Existem dependências críticas?','bool'),
+    Q('forn_sem_conting','Existem fornecedores sem plano de contingência?','bool'),
+  ],
+  scaleGroup:{label:'Autoavaliação de maturidade', items:[
+    Q('forn_maturidade','Maturidade da gestão de fornecedores','scale'),
+  ]}},
+{num:15, id:'s15', title:'Indicadores e KPIs', obj:'Levantar os indicadores disponíveis — valor atual, meta e periodicidade.', special:'kpis',
+  items:[],
+  scaleGroup:{label:'Autoavaliação de maturidade', items:[
+    Q('kpi_maturidade','Maturidade da gestão de indicadores / KPIs','scale'),
+  ]}},
+{num:16, id:'s16', title:'Experiência do Usuário', obj:'Avaliar como os usuários percebem a TI.',
+  items:[
+    Q('ux_percepcao','Qual é a percepção atual dos usuários sobre a TI?','textarea'),
+    Q('ux_reclamacoes','Quais são as principais reclamações?','textarea'),
+    Q('ux_servicos_insatisf','Quais serviços geram maior insatisfação?','textarea'),
+    Q('ux_acompanham','Os usuários conseguem acompanhar seus chamados?','bool'),
+    Q('ux_comunicacao_bin','Existe comunicação adequada?','bool'),
+    Q('ux_pesquisa','Existe pesquisa de satisfação?','bool'),
+    Q('ux_csat_atual','Qual o CSAT atual?','percent'),
+    Q('ux_nps','Existe NPS da TI?','bool'),
+    Q('ux_pontos_positivos','Quais são os principais pontos positivos mencionados pelos usuários?','textarea'),
+  ],
+  scaleGroup:{label:'Avaliar de 1 a 5', items:[
+    Q('ux_facilidade','Facilidade para solicitar suporte','scale'), Q('ux_velocidade','Velocidade','scale'),
+    Q('ux_comunicacao_sc','Comunicação','scale'), Q('ux_qualidade','Qualidade da solução','scale'), Q('ux_satisfacao','Satisfação geral','scale'),
+  ]}},
+{num:17, id:'s17', title:'Principais Gargalos', obj:'Identificar, na visão do entrevistado, onde a operação mais perde eficiência.',
+  items:[
+    Q('garg_onde_tempo','Onde a operação mais perde tempo?','textarea'),
+    Q('garg_retrabalho','Qual atividade gera mais retrabalho?','textarea'),
+    Q('garg_manual','Qual processo depende excessivamente de intervenção manual?','textarea'),
+    Q('garg_repetitivo','Qual problema aparece repetidamente?','textarea'),
+    Q('garg_dep_pessoa','Qual atividade depende de uma única pessoa?','textarea'),
+    Q('garg_atrasos','Onde existem maiores atrasos?','textarea'),
+    Q('garg_equipe_sobrecarr','Qual equipe está mais sobrecarregada?','textarea'),
+    Q('garg_servico_incidentes','Qual serviço apresenta maior quantidade de incidentes?','textarea'),
+    Q('garg_impacto_negocio','Qual problema mais impacta o negócio?','textarea'),
+    Q('garg_top3','Se pudesse resolver apenas 3 problemas da TI hoje, quais seriam?','textarea'),
+  ]},
+{num:18, id:'s18', title:'Riscos', obj:'Identificar riscos operacionais, tecnológicos e de segurança.', special:'riscos',
+  items:[
+    Q('riscos_principais','Quais são os principais riscos conhecidos, na visão do entrevistado?','textarea'),
+    Q('rb_check','Verificação rápida de exposição','multi',{options:[
+      'Existem pontos únicos de falha','Existem sistemas sem suporte','Existem equipamentos obsoletos',
+      'Existem servidores sem atualização','Existem sistemas sem backup','Existem acessos privilegiados sem revisão',
+      'Existem fornecedores críticos sem contingência','Existem processos sem documentação','Existem pessoas-chave sem substituto']}),
+    Q('risco_preocupa_gestao','Existe algum risco que atualmente preocupa a gestão?','textarea'),
+  ]},
+{num:19, id:'s19', title:'Diagnóstico de Maturidade', obj:'Painel calculado automaticamente a partir das autoavaliações de 1 a 5 registradas nas seções anteriores.', special:'maturidade', items:[]},
+{num:20, id:'s20', title:'Classificação dos Problemas', obj:'Registre cada problema identificado e classifique sua criticidade.', special:'problemas', items:[]},
+{num:21, id:'s21', title:'Plano de Ação — 90 Dias', obj:'Gerado a partir das áreas de menor maturidade, dos problemas críticos e dos riscos de maior exposição.', special:'plano', items:[]},
+{num:22, id:'s22', title:'Resumo do Diagnóstico', obj:'Síntese executiva composta automaticamente a partir de todo o formulário.', special:'resumo', items:[]},
+];
+
+/* ============================================================
+   RENDER HELPERS
+   ============================================================ */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function setAnswer(key, val){
+  if(val===''||val==null||(Array.isArray(val)&&val.length===0)) delete answers[key];
+  else answers[key]=val;
+  updateProgress();
+}
+
+function renderQ(q){
+  const id = 'f_'+q.key;
+  let body='';
+  switch(q.type){
+    case 'text':
+      body = `<input type="text" id="${id}" data-key="${q.key}" oninput="setAnswer('${q.key}',this.value)">`; break;
+    case 'number':
+      body = `<input type="number" id="${id}" data-key="${q.key}" oninput="setAnswer('${q.key}',this.value)">`; break;
+    case 'percent':
+      body = `<div class="unit-wrap"><input type="number" min="0" max="100" id="${id}" data-key="${q.key}" oninput="setAnswer('${q.key}',this.value)"><span>%</span></div>`; break;
+    case 'textarea':
+      body = `<textarea id="${id}" data-key="${q.key}" oninput="setAnswer('${q.key}',this.value)"></textarea>`; break;
+    case 'select':
+      body = `<select id="${id}" data-key="${q.key}" onchange="setAnswer('${q.key}',this.value)"><option value="">Selecione…</option>${q.opts.options.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>`; break;
+    case 'bool':
+      body = `<div class="seg bool" data-key="${q.key}">
+        <button type="button" class="opt yes" onclick="pickSeg(this,'${q.key}','Sim')">Sim</button>
+        <button type="button" class="opt no" onclick="pickSeg(this,'${q.key}','Não')">Não</button>
+        <button type="button" class="opt" onclick="pickSeg(this,'${q.key}','Não sei')">Não sei</button>
+      </div>`; break;
+    case 'multi':
+      body = `<div class="checks" data-key="${q.key}">${q.opts.options.map((o,i)=>`<label><input type="checkbox" onchange="toggleMulti('${q.key}','${esc(o)}',this.checked)"> ${esc(o)}</label>`).join('')}</div>`; break;
+    case 'scale':
+      body = `<div class="scale5" data-key="${q.key}">${[1,2,3,4,5].map(n=>`<button type="button" class="sopt" onclick="pickScale(this,'${q.key}',${n})">${n}</button>`).join('')}</div>
+        <div class="scale-legend"><span>Inexistente</span><span>Otimizado</span></div>`; break;
+  }
+  return `<div class="q">${q.type!=='scale'?`<label class="qlabel">${esc(q.label)}</label>`:`<label class="qlabel">${esc(q.label)}</label>`}${body}</div>`;
+}
+
+function pickSeg(btn,key,val){
+  const wrap = btn.parentElement;
+  [...wrap.children].forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  setAnswer(key,val);
+}
+function pickScale(btn,key,n){
+  const wrap = btn.parentElement;
+  [...wrap.children].forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  setAnswer(key,n);
+}
+function toggleMulti(key,opt,checked){
+  const arr = Array.isArray(answers[key])? answers[key].slice() : [];
+  const idx = arr.indexOf(opt);
+  if(checked && idx===-1) arr.push(opt);
+  if(!checked && idx>-1) arr.splice(idx,1);
+  setAnswer(key,arr);
+}
+
+/* ---- dynamic table rows (fornecedores, riscos, problemas, plano) ---- */
+function makeTable(containerId, storeKey, columns, opts){
+  opts = opts||{};
+  if(!answers[storeKey]) answers[storeKey]=[];
+  const c = document.getElementById(containerId);
+  function paint(){
+    const rows = answers[storeKey];
+    let html = `<table class="dyn"><thead><tr>${columns.map(col=>`<th>${esc(col.label)}</th>`).join('')}<th></th></tr></thead><tbody>`;
+    rows.forEach((row,ri)=>{
+      html += '<tr>';
+      columns.forEach(col=>{
+        const val = row[col.key]||'';
+        if(col.type==='select'){
+          html += `<td><select onchange="updateCell('${storeKey}',${ri},'${col.key}',this.value)">${['',...col.options].map(o=>`<option value="${esc(o)}" ${o===val?'selected':''}>${o?esc(o):'—'}</option>`).join('')}</select></td>`;
+        } else {
+          html += `<td><input type="text" value="${esc(val)}" oninput="updateCell('${storeKey}',${ri},'${col.key}',this.value)"></td>`;
+        }
+      });
+      let extra='';
+      if(opts.computed){ extra = `<span class="mono" style="font-size:11.5px;color:#8B99A2;">${opts.computed(row)}</span>`; }
+      html += `<td>${extra} <button type="button" class="rm" onclick="removeRow('${storeKey}',${ri})" title="Remover">×</button></td></tr>`;
+    });
+    html += '</tbody></table>';
+    if(rows.length===0){ html = `<p class="placeholder-note">Nenhum registro adicionado ainda.</p>` + html.replace('<tbody></tbody>',''); }
+    html += `<div class="addrow"><button type="button" class="btn ghost" onclick="addRow('${storeKey}','${containerId}')">+ adicionar linha</button></div>`;
+    c.innerHTML = html;
+  }
+  tablePainters[storeKey]={paint, columns};
+  paint();
+}
+const tablePainters = {};
+function addRow(storeKey, containerId){
+  answers[storeKey].push({});
+  tablePainters[storeKey].paint();
+  updateProgress();
+}
+function removeRow(storeKey, idx){
+  answers[storeKey].splice(idx,1);
+  tablePainters[storeKey].paint();
+  updateProgress();
+}
+function updateCell(storeKey, idx, colKey, val){
+  answers[storeKey][idx][colKey]=val;
+  if(tablePainters[storeKey]) tablePainters[storeKey].paint();
+  updateProgress();
+}
+
+/* ============================================================
+   BUILD SECTIONS INTO DOM
+   ============================================================ */
+const secWrap = document.getElementById('sections');
+const navList = document.getElementById('navlist');
+
+SECTIONS.forEach(sec=>{
+  navList.insertAdjacentHTML('beforeend', `<li><a href="#${sec.id}" data-sec="${sec.id}"><span class="n">${String(sec.num).padStart(2,'0')}</span><span class="dot"></span><span>${esc(sec.title)}</span></a></li>`);
+
+  const card = document.createElement('section');
+  card.className='card'; card.id=sec.id;
+  let bodyHtml='';
+
+  if(!sec.special || sec.special==='itsm' || sec.special==='fornecedores' || sec.special==='kpis' || sec.special==='riscos'){
+    bodyHtml += sec.items.map(renderQ).join('');
+  }
+
+  if(sec.special==='itsm'){
+    bodyHtml = `<div class="scalegroup" style="margin-top:0;padding-top:0;border-top:none;">
+      <div class="gt">Maturidade de cada processo (1 — inexistente · 5 — otimizado)</div>
+      ${PROCESSES.map(([key,label])=>renderQ(Q(key,label,'scale'))).join('')}
+    </div>` + bodyHtml;
+  }
+
+  if(sec.special==='fornecedores'){
+    bodyHtml += `<div class="q" style="margin-top:22px;"><label class="qlabel">Mapa de fornecedores críticos</label><div id="tbl_fornecedores"></div></div>`;
+  }
+
+  if(sec.special==='kpis'){
+    bodyHtml = `<div class="q"><table class="kpi-table"><thead><tr><th>Indicador</th><th>Valor atual</th><th>Meta</th><th>Periodicidade</th></tr></thead><tbody>
+      ${INDICATORS.map((ind,i)=>{
+        const k='kpi_'+i;
+        return `<tr><td>${esc(ind)}</td>
+          <td><input type="text" placeholder="Não mensurado" oninput="setAnswer('${k}_val',this.value)"></td>
+          <td><input type="text" oninput="setAnswer('${k}_meta',this.value)"></td>
+          <td><input type="text" placeholder="ex.: mensal" oninput="setAnswer('${k}_per',this.value)"></td></tr>`;
+      }).join('')}
+    </tbody></table></div>` + bodyHtml;
+  }
+
+  if(sec.special==='riscos'){
+    bodyHtml += `<div class="q" style="margin-top:22px;"><label class="qlabel">Registro de riscos identificados</label><div id="tbl_riscos"></div></div>`;
+  }
+
+  if(sec.special==='maturidade'){
+    bodyHtml = `<div id="maturidadeOut"><p class="placeholder-note">Clique em “Gerar diagnóstico” na barra superior para calcular o painel de maturidade a partir das autoavaliações preenchidas.</p></div>`;
+  }
+  if(sec.special==='problemas'){
+    bodyHtml = `<div class="q"><label class="qlabel">Cada problema identificado durante a reunião</label><div id="tbl_problemas"></div></div>`;
+  }
+  if(sec.special==='plano'){
+    bodyHtml = `<div id="planOut"><p class="placeholder-note">Clique em “Gerar diagnóstico” para pré-preencher o plano com base nas áreas de menor maturidade, nos problemas críticos e nos riscos de maior exposição. As linhas geradas podem ser editadas livremente.</p></div>`;
+  }
+  if(sec.special==='resumo'){
+    bodyHtml = `<div id="summaryOut"></div>`;
+  }
+
+  card.innerHTML = `<div class="head"><span class="num mono">${String(sec.num).padStart(2,'0')}</span><div><h2>${esc(sec.title)}</h2><div class="obj">${esc(sec.obj)}</div></div></div><div class="body">${bodyHtml}
+    ${sec.scaleGroup ? `<div class="scalegroup"><div class="gt">${esc(sec.scaleGroup.label)}</div>${sec.scaleGroup.items.map(renderQ).join('')}</div>` : ''}
+  </div>`;
+  secWrap.appendChild(card);
+});
+
+makeTable('tbl_fornecedores','tbl_fornecedores',[
+  {key:'fornecedor',label:'Fornecedor'}, {key:'servico',label:'Serviço'}, {key:'sla',label:'SLA'},
+  {key:'criticidade',label:'Criticidade',type:'select',options:['Baixa','Média','Alta']}, {key:'problema',label:'Principal problema'},
+]);
+
+makeTable('tbl_riscos','tbl_riscos',[
+  {key:'descricao',label:'Descrição do risco'},
+  {key:'prob',label:'Probabilidade',type:'select',options:['1','2','3','4','5']},
+  {key:'impacto',label:'Impacto',type:'select',options:['1','2','3','4','5']},
+  {key:'controle',label:'Controle existente'}, {key:'acao',label:'Ação recomendada'},
+], {computed:(row)=>{
+  const p=parseInt(row.prob)||0, im=parseInt(row.impacto)||0;
+  if(!p||!im) return '';
+  const c=p*im;
+  return 'crit.'+c;
+}});
+
+makeTable('tbl_problemas','tbl_problemas',[
+  {key:'problema',label:'Problema'}, {key:'area',label:'Área afetada'}, {key:'causa',label:'Causa provável'},
+  {key:'evidencia',label:'Evidência'},
+  {key:'impacto',label:'Impacto',type:'select',options:['Baixo','Médio','Alto']},
+  {key:'frequencia',label:'Frequência',type:'select',options:['Rara','Ocasional','Frequente']},
+  {key:'risco',label:'Risco',type:'select',options:['Baixo','Médio','Alto']},
+  {key:'esforco',label:'Esforço',type:'select',options:['Baixo','Médio','Alto']},
+  {key:'prioridade',label:'Prioridade',type:'select',options:['🔴 Crítico','🟡 Importante','🟢 Oportunidade']},
+]);
+
+answers['plano_rows']={ '0-30':[], '31-60':[], '61-90':[] };
+
+/* ============================================================
+   PROGRESS + NAV SCROLLSPY
+   ============================================================ */
+let TOTAL_FIELDS = 0;
+SECTIONS.forEach(sec=>{
+  TOTAL_FIELDS += sec.items.length;
+  if(sec.scaleGroup) TOTAL_FIELDS += sec.scaleGroup.items.length;
+});
+TOTAL_FIELDS += PROCESSES.length + INDICATORS.length*3;
+
+function updateProgress(){
+  const count = Object.keys(answers).filter(k=>!['tbl_fornecedores','tbl_riscos','tbl_problemas','plano_rows'].includes(k)).length;
+  const pct = Math.min(100, Math.round(100*count/TOTAL_FIELDS));
+  document.getElementById('progFill').style.width = pct+'%';
+  document.getElementById('progPct').textContent = pct+'%';
+  document.getElementById('progAns').textContent = count;
+
+  SECTIONS.forEach(sec=>{
+    const keys = [...sec.items.map(i=>i.key), ...(sec.scaleGroup?sec.scaleGroup.items.map(i=>i.key):[])];
+    const has = keys.some(k=>answers[k]!==undefined) ||
+      (sec.special==='fornecedores' && answers.tbl_fornecedores && answers.tbl_fornecedores.length>0) ||
+      (sec.special==='riscos' && answers.tbl_riscos && answers.tbl_riscos.length>0) ||
+      (sec.special==='itsm' && PROCESSES.some(([k])=>answers[k]!==undefined)) ||
+      (sec.special==='kpis' && Object.keys(answers).some(k=>k.startsWith('kpi_')));
+    const navEl = navList.querySelector(`a[data-sec="${sec.id}"]`);
+    if(navEl) navEl.classList.toggle('answered', !!has);
+  });
+}
+
+if(typeof IntersectionObserver !== 'undefined'){
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        navList.querySelectorAll('a').forEach(a=>a.classList.remove('active'));
+        const a = navList.querySelector(`a[data-sec="${e.target.id}"]`);
+        if(a) a.classList.add('active');
+      }
+    });
+  },{rootMargin:'-30% 0px -60% 0px'});
+  document.querySelectorAll('section.card').forEach(s=>io.observe(s));
+}
+
+/* ============================================================
+   MATURITY / DIAGNOSIS ENGINE
+   ============================================================ */
+function levelClass(v){ v=Math.round(v); return 'lvl'+Math.max(1,Math.min(5,v)); }
+function levelLabel(v){
+  if(v<1.5) return 'Crítico / inexistente';
+  if(v<2.5) return 'Inicial';
+  if(v<3.5) return 'Em desenvolvimento';
+  if(v<4.5) return 'Estruturado';
+  return 'Otimizado';
+}
+function levelEmoji(v){
+  if(v<1.5) return '🔴'; if(v<2.5) return '🟠'; if(v<3.5) return '🟡'; if(v<4.5) return '🟢'; return '🔵';
+}
+
+function computeMaturity(){
+  const cats = MATURITY_CATS.map(cat=>{
+    const vals = cat.ids.map(id=>answers[id]).filter(v=>v!==undefined && v!=='').map(Number);
+    const score = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+    return {...cat, score, answered: vals.length>0};
+  });
+  const answeredCats = cats.filter(c=>c.answered);
+  const overall = answeredCats.length ? answeredCats.reduce((a,c)=>a+c.score,0)/answeredCats.length : null;
+  const ranked = answeredCats.slice().sort((a,b)=>a.score-b.score).slice(0,5);
+  return {cats, overall, ranked};
+}
+
+function renderMaturity(){
+  const {cats, overall, ranked} = computeMaturity();
+  const answeredCats = cats.filter(c=>c.answered);
+  let html = '';
+  html += `<div class="score-hero">
+    <div><div class="num">${overall!==null?overall.toFixed(1):'—'}</div><div class="lbl">SCORE GERAL DE MATURIDADE (1–5)</div></div>
+    <div class="desc">${overall!==null? `Classificação geral: <strong>${levelEmoji(overall)} ${levelLabel(overall)}</strong>. Calculado como a média das ${answeredCats.length} dimensões com autoavaliação preenchida, de um total de ${cats.length}.` : 'Preencha ao menos uma escala de 1 a 5 em qualquer seção para calcular o score.'}</div>
+  </div>`;
+  html += '<div class="bars">';
+  cats.forEach(c=>{
+    const v = c.answered ? c.score : 0;
+    const pct = c.answered ? (v/5*100) : 0;
+    html += `<div class="bar-row">
+      <div class="l">${esc(c.label)}</div>
+      <div class="bar-track"><div class="bar-fill ${c.answered?levelClass(v):''}" style="width:${pct}%;background:${c.answered?'':'#E6EAEE'}"></div></div>
+      <div class="v">${c.answered? c.score.toFixed(1) : '—'}</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  if(ranked.length){
+    html += `<div class="rankbox"><h3>Top 5 prioridades (menores scores de maturidade)</h3><ol>${ranked.map(c=>`<li><strong>${esc(c.label)}</strong> — ${c.score.toFixed(1)} · ${levelLabel(c.score)}</li>`).join('')}</ol></div>`;
+  }
+  document.getElementById('maturidadeOut').innerHTML = html;
+  return {cats, overall, ranked};
+}
+
+/* ---- action plan seeding ---- */
+const ACTION_TEMPLATES = {
+  governanca:  {b0:'Definir formalmente o responsável pela gestão de TI e as responsabilidades da equipe', b1:'Estruturar organograma, políticas de TI e ritual de reuniões de acompanhamento', b2:'Implantar planejamento estratégico de TI e orçamento formal'},
+  servicedesk: {b0:'Padronizar abertura, triagem e priorização de chamados; reduzir backlog atual', b1:'Publicar catálogo de serviços e formalizar filas, escalonamento e encerramento', b2:'Implantar pesquisa de satisfação contínua e metas de FCR'},
+  itsm:        {b0:'Formalizar os processos ITSM mais críticos e mais usados no dia a dia (Incidente, Requisição)', b1:'Estruturar Problem, Change e Knowledge Management', b2:'Elevar os demais processos ITSM ao nível estruturado/otimizado com indicadores'},
+  infra:       {b0:'Atualizar inventário de servidores e ativos; mapear pontos únicos de falha', b1:'Implantar monitoramento com alertas automatizados e plano de capacidade', b2:'Eliminar redundância crítica pendente e formalizar documentação de infraestrutura'},
+  noc:         {b0:'Definir escopo mínimo de monitoramento (servidores, rede, aplicações críticas)', b1:'Estruturar procedimentos por tipo de alerta e reduzir falsos positivos', b2:'Evoluir para cobertura 24x7 com indicadores de tempo de detecção e resposta'},
+  incidentes:  {b0:'Formalizar classificação de impacto/urgência e matriz de prioridade', b1:'Implantar comunicação estruturada e RCA para incidentes críticos', b2:'Automatizar escalonamento e consolidar indicadores de incidentes'},
+  problemas:   {b0:'Registrar formalmente os problemas recorrentes identificados na reunião', b1:'Implantar Problem Management com análise de causa raiz', b2:'Medir taxa de recorrência e reduzir reincidência de problemas crônicos'},
+  mudancas:    {b0:'Formalizar registro e aprovação de mudanças, com plano de rollback obrigatório', b1:'Implantar janela e calendário de mudanças com análise de risco', b2:'Medir e reduzir a taxa de incidentes causados por mudanças'},
+  backup:      {b0:'Corrigir falhas recorrentes de backup e validar cópia off-site/imutável', b1:'Testar restauração formalmente e documentar RTO/RPO', b2:'Formalizar plano de Disaster Recovery e BCP com responsáveis definidos'},
+  continuidade:{b0:'Mapear serviços críticos sem plano de continuidade', b1:'Estruturar plano de continuidade para os serviços críticos', b2:'Testar plano de continuidade e revisar periodicamente'},
+  seguranca:   {b0:'Corrigir lacunas críticas de controle de acesso, MFA e patch management', b1:'Implantar gestão de vulnerabilidades e monitoramento de segurança contínuo', b2:'Estruturar resposta a incidentes de segurança e programa de conscientização'},
+  documentacao:{b0:'Documentar ambientes críticos e procedimentos mais usados no atendimento', b1:'Estruturar base de conhecimento com responsável pela manutenção', b2:'Padronizar runbooks e manter documentação sempre atualizada'},
+  fornecedores:{b0:'Mapear fornecedores críticos sem plano de contingência', b1:'Formalizar contratos e SLAs com fornecedores relevantes', b2:'Implantar avaliação periódica de fornecedores'},
+  indicadores: {b0:'Definir e começar a medir os indicadores essenciais (SLA, backlog, FCR, disponibilidade)', b1:'Publicar dashboard de indicadores para a liderança', b2:'Evoluir metas e revisão periódica de KPIs'},
+  equipe:      {b0:'Redistribuir carga de profissionais sobrecarregados e mapear funções críticas sem substituto', b1:'Implantar treinamento periódico e documentação das atividades', b2:'Estruturar acompanhamento de produtividade e plano de desenvolvimento da equipe'},
+};
+
+function seedPlan(cats, ranked){
+  const rows = { '0-30':[], '31-60':[], '61-90':[] };
+  ranked.forEach(c=>{
+    const t = ACTION_TEMPLATES[c.key];
+    if(!t) return;
+    rows['0-30'].push({acao:t.b0, resp:'', prazo:'30 dias', prioridade:'🔴 Crítico', indicador:'Melhora do score de '+c.label});
+  });
+  cats.filter(c=>c.answered && !ranked.includes(c)).forEach(c=>{
+    const t = ACTION_TEMPLATES[c.key];
+    if(!t) return;
+    rows['31-60'].push({acao:t.b1, resp:'', prazo:'60 dias', prioridade:'🟡 Importante', indicador:'Processo estruturado e documentado'});
+    rows['61-90'].push({acao:t.b2, resp:'', prazo:'90 dias', prioridade:'🟢 Oportunidade', indicador:'Indicador de maturidade elevado'});
+  });
+  // pull critical problems from section 20
+  (answers.tbl_problemas||[]).filter(p=>p.problema && p.prioridade==='🔴 Crítico').forEach(p=>{
+    rows['0-30'].push({acao:'Tratar problema crítico: '+p.problema, resp:'', prazo:'30 dias', prioridade:'🔴 Crítico', indicador:'Problema resolvido / mitigado'});
+  });
+  // pull high-criticality risks (prob*impacto >= 15) from section 18
+  (answers.tbl_riscos||[]).forEach(r=>{
+    const c=(parseInt(r.prob)||0)*(parseInt(r.impacto)||0);
+    if(c>=15 && r.descricao){
+      rows['0-30'].push({acao:'Mitigar risco crítico: '+r.descricao, resp:'', prazo:'30 dias', prioridade:'🔴 Crítico', indicador:'Risco reduzido / controlado'});
+    }
+  });
+  return rows;
+}
+
+function renderPlan(cats, ranked){
+  if(!answers.plano_rows || Object.values(answers.plano_rows).every(a=>a.length===0)){
+    answers.plano_rows = seedPlan(cats, ranked);
+  }
+  const buckets = [
+    ['0-30','0–30 dias — Estabilização','Problemas críticos, backlog, SLA, monitoramento, backup, segurança e documentação urgente.'],
+    ['31-60','31–60 dias — Estruturação','Processos ITSM, catálogo de serviços, base de conhecimento, SLAs e padronização operacional.'],
+    ['61-90','61–90 dias — Otimização','Automação, melhoria contínua, governança, gestão de fornecedores e evolução de KPIs.'],
+  ];
+  let html='';
+  buckets.forEach(([key,title,sub])=>{
+    html += `<div class="plan-bucket"><h3>${title}</h3><div class="sub">${sub}</div><div id="plantbl_${key}"></div></div>`;
+  });
+  document.getElementById('planOut').innerHTML = html;
+  buckets.forEach(([key])=>{
+    makeTable('plantbl_'+key, 'plano_rows_'+key, [
+      {key:'acao',label:'Ação'}, {key:'resp',label:'Responsável'}, {key:'prazo',label:'Prazo'},
+      {key:'prioridade',label:'Prioridade',type:'select',options:['🔴 Crítico','🟡 Importante','🟢 Oportunidade']},
+      {key:'indicador',label:'Indicador de sucesso'},
+    ]);
+    answers['plano_rows_'+key] = answers.plano_rows[key];
+    tablePainters['plano_rows_'+key].paint();
+  });
+}
+
+function renderSummary(cats, overall, ranked){
+  const probs = (answers.tbl_problemas||[]).filter(p=>p.problema);
+  const order = {'🔴 Crítico':0,'🟡 Importante':1,'🟢 Oportunidade':2,'':3};
+  probs.sort((a,b)=>(order[a.prioridade]??3)-(order[b.prioridade]??3));
+  const top5 = probs.slice(0,5);
+  const critCount = probs.filter(p=>p.prioridade==='🔴 Crítico').length;
+  const impCount = probs.filter(p=>p.prioridade==='🟡 Importante').length;
+  const oppCount = probs.filter(p=>p.prioridade==='🟢 Oportunidade').length;
+
+  const empresa = answers.empresa_nome || '(empresa não informada)';
+
+  let html = '';
+  html += `<div class="summary-block"><h3>Principais problemas</h3><div class="txt">${
+    top5.length ? top5.map((p,i)=>`${i+1}. ${p.prioridade||'—'} ${esc(p.problema)}${p.area?' — área: '+esc(p.area):''}`).join('\n')
+    : 'Nenhum problema foi registrado na seção 20 (Classificação dos Problemas).'
+  }</div></div>`;
+
+  html += `<div class="summary-block"><h3>Possíveis causas</h3><div class="txt">${
+    top5.filter(p=>p.causa).length ? top5.filter(p=>p.causa).map(p=>`• ${esc(p.problema)}: ${esc(p.causa)}`).join('\n')
+    : 'Causas prováveis não foram registradas para os problemas priorizados.'
+  }</div></div>`;
+
+  const weakLabels = ranked.map(c=>c.label).join(', ');
+  html += `<div class="summary-block"><h3>Impacto no negócio</h3><div class="txt">${
+    ranked.length ? `As dimensões com menor maturidade — ${esc(weakLabels)} — concentram o maior risco de impacto sobre produtividade, disponibilidade, segurança e experiência dos usuários de ${esc(empresa)}. Enquanto essas áreas não forem estruturadas, tendem a gerar retrabalho, indisponibilidade recorrente e insatisfação dos usuários atendidos.`
+    : 'Preencha as autoavaliações de maturidade para que o impacto no negócio seja calculado automaticamente.'
+  }</div></div>`;
+
+  html += `<div class="summary-block"><h3>Prioridade</h3><div class="txt">🔴 Crítico: ${critCount}   🟡 Importante: ${impCount}   🟢 Oportunidade: ${oppCount}</div></div>`;
+
+  const planActions = (answers.plano_rows && answers.plano_rows['0-30']) ? answers.plano_rows['0-30'] : [];
+  html += `<div class="summary-block"><h3>Recomendações iniciais</h3><div class="txt">${
+    planActions.length ? planActions.map(a=>'• '+esc(a.acao)).join('\n') : 'Gere o plano de ação (botão “Gerar diagnóstico”) para compor as recomendações iniciais.'
+  }</div></div>`;
+
+  html += `<div class="summary-block"><h3>Próximos passos (90 dias)</h3><div class="txt">1. Estabilizar os pontos críticos listados em 0–30 dias.\n2. Estruturar processos ITSM e SLAs em 31–60 dias.\n3. Consolidar governança, automação e KPIs em 61–90 dias.\n4. Agendar checkpoint de revisão de maturidade ao final do ciclo de 90 dias.</div></div>`;
+
+  document.getElementById('summaryOut').innerHTML = html;
+}
+
+function generateDiagnosis(){
+  const {cats, overall, ranked} = renderMaturity();
+  renderPlan(cats, ranked);
+  renderSummary(cats, overall, ranked);
+  reportGenerated = true;
+  const s19 = document.getElementById('s19');
+  if(s19 && s19.scrollIntoView) s19.scrollIntoView({behavior:'smooth', block:'start'});
+}
+document.getElementById('btnGenerate').addEventListener('click', generateDiagnosis);
+
+document.getElementById('btnClear').addEventListener('click', ()=>{
+  if(!confirm('Limpar todas as respostas preenchidas nesta sessão?')) return;
+  location.reload();
+});
+
+/* ============================================================
+   REPORT DOWNLOAD
+   ============================================================ */
+function buildReportHtml(){
+  if(!reportGenerated) generateDiagnosis();
+  const {cats, overall, ranked} = computeMaturity();
+  const empresa = answers.empresa_nome || 'Empresa não informada';
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric'});
+
+  function sectionAnswersHtml(sec){
+    let rows='';
+    const items = [...sec.items, ...(sec.scaleGroup?sec.scaleGroup.items:[])];
+    items.forEach(q=>{
+      let v = answers[q.key];
+      if(v===undefined) return;
+      if(Array.isArray(v)) v = v.join(', ');
+      if(q.type==='scale') v = v+' — '+SCALE_LABELS[v-1];
+      if(q.type==='percent') v = v+'%';
+      rows += `<tr><td class="ql">${esc(q.label)}</td><td class="qv">${esc(v)}</td></tr>`;
+    });
+    if(sec.special==='itsm'){
+      PROCESSES.forEach(([k,label])=>{
+        if(answers[k]!==undefined) rows += `<tr><td class="ql">${esc(label)}</td><td class="qv">${answers[k]} — ${SCALE_LABELS[answers[k]-1]}</td></tr>`;
+      });
+    }
+    if(sec.special==='kpis'){
+      INDICATORS.forEach((ind,i)=>{
+        const val=answers['kpi_'+i+'_val'], meta=answers['kpi_'+i+'_meta'], per=answers['kpi_'+i+'_per'];
+        if(val||meta||per) rows += `<tr><td class="ql">${esc(ind)}</td><td class="qv">Atual: ${esc(val||'Não mensurado')} · Meta: ${esc(meta||'—')} · Periodicidade: ${esc(per||'—')}</td></tr>`;
+      });
+    }
+    let extraTable = '';
+    if(sec.special==='fornecedores' && answers.tbl_fornecedores && answers.tbl_fornecedores.length){
+      extraTable = tableToHtml(['Fornecedor','Serviço','SLA','Criticidade','Principal problema'], answers.tbl_fornecedores.map(r=>[r.fornecedor,r.servico,r.sla,r.criticidade,r.problema]));
+    }
+    if(sec.special==='riscos' && answers.tbl_riscos && answers.tbl_riscos.length){
+      extraTable = tableToHtml(['Descrição','Probabilidade','Impacto','Criticidade','Controle existente','Ação recomendada'], answers.tbl_riscos.map(r=>[r.descricao,r.prob,r.impacto,(parseInt(r.prob)||0)*(parseInt(r.impacto)||0)||'',r.controle,r.acao]));
+    }
+    if(sec.special==='problemas' && answers.tbl_problemas && answers.tbl_problemas.length){
+      extraTable = tableToHtml(['Problema','Área','Causa','Evidência','Impacto','Frequência','Risco','Esforço','Prioridade'], answers.tbl_problemas.map(r=>[r.problema,r.area,r.causa,r.evidencia,r.impacto,r.frequencia,r.risco,r.esforco,r.prioridade]));
+    }
+    if(!rows && !extraTable) return '<p class="empty">Nenhuma resposta registrada nesta seção.</p>';
+    return (rows?`<table class="ans"><tbody>${rows}</tbody></table>`:'') + extraTable;
+  }
+  function tableToHtml(cols, dataRows){
+    let h = `<table class="ans wide"><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>`;
+    dataRows.forEach(r=>{ h+= `<tr>${r.map(v=>`<td>${esc(v||'—')}</td>`).join('')}</tr>`; });
+    return h+'</tbody></table>';
+  }
+
+  const sectionsHtml = SECTIONS.filter(s=>!['maturidade','plano','resumo'].includes(s.special)).map(sec=>
+    `<div class="rsec"><h3>${sec.num}. ${esc(sec.title)}</h3>${sectionAnswersHtml(sec)}</div>`
+  ).join('');
+
+  const barsHtml = cats.map(c=>{
+    const v = c.answered?c.score:null;
+    return `<div class="rbar"><div class="rl">${esc(c.label)}</div><div class="rtrack"><div class="rfill" style="width:${v?v/5*100:0}%;background:${v?scoreColor(v):'#E6EAEE'}"></div></div><div class="rv">${v?v.toFixed(1):'—'}</div></div>`;
+  }).join('');
+
+  function scoreColor(v){ if(v<1.5) return '#B3452E'; if(v<2.5) return '#C1704A'; if(v<3.5) return '#C98A2E'; if(v<4.5) return '#6FA37E'; return '#2E7D5B'; }
+
+  const rankHtml = ranked.map((c,i)=>`<li>${i+1}. <strong>${esc(c.label)}</strong> — ${c.score.toFixed(1)} (${levelLabel(c.score)})</li>`).join('');
+
+  const problems = (answers.tbl_problemas||[]).filter(p=>p.problema);
+  const order = {'🔴 Crítico':0,'🟡 Importante':1,'🟢 Oportunidade':2,'':3};
+  problems.sort((a,b)=>(order[a.prioridade]??3)-(order[b.prioridade]??3));
+
+  const planHtml = ['0-30','31-60','61-90'].map(key=>{
+    const titleMap = {'0-30':'0–30 dias — Estabilização','31-60':'31–60 dias — Estruturação','61-90':'61–90 dias — Otimização'};
+    const rows = (answers.plano_rows && answers.plano_rows[key]) || [];
+    return `<h4>${titleMap[key]}</h4>` + (rows.length ? tableToHtml(['Ação','Responsável','Prazo','Prioridade','Indicador de sucesso'], rows.map(r=>[r.acao,r.resp,r.prazo,r.prioridade,r.indicador])) : '<p class="empty">Sem ações registradas.</p>');
+  }).join('');
+
+  const summaryHtml = document.getElementById('summaryOut').innerHTML;
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Diagnóstico Executivo de Operações de TI — ${esc(empresa)}</title>
+<style>
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#EAEEF2;color:#16212B;margin:0;padding:0;line-height:1.55;}
+  .wrap{max-width:880px;margin:0 auto;padding:40px 30px 80px;}
+  .cover{background:#123F4D;color:#fff;padding:36px 34px;border-radius:4px;margin-bottom:30px;}
+  .cover .k{font-size:12px;color:#8FB4C0;letter-spacing:.03em;}
+  .cover h1{font-size:26px;margin:10px 0 6px;font-weight:700;}
+  .cover .meta{font-size:13px;color:#DCE7EA;margin-top:14px;}
+  h2{font-size:19px;border-bottom:2px solid #1E5F74;padding-bottom:8px;margin-top:40px;color:#123F4D;}
+  h3{font-size:16px;color:#16212B;margin-top:26px;}
+  h4{font-size:13.5px;color:#4B5A66;margin:16px 0 6px;}
+  .scorebox{display:flex;gap:26px;align-items:center;background:#fff;border:1px solid #D6DDE3;border-radius:4px;padding:20px 24px;margin:16px 0;}
+  .scorebox .num{font-size:42px;font-weight:700;color:#123F4D;}
+  .scorebox .lbl{font-size:12px;color:#4B5A66;}
+  .rbar{display:grid;grid-template-columns:170px 1fr 44px;gap:10px;align-items:center;margin-bottom:8px;font-size:12.5px;}
+  .rtrack{height:8px;background:#E6EAEE;border-radius:4px;overflow:hidden;}
+  .rfill{height:100%;}
+  .rankbox{background:#F7EBD8;border:1px solid #EAD3A2;border-radius:4px;padding:16px 20px;margin-top:18px;}
+  .rankbox ol{margin:8px 0 0;padding-left:20px;}
+  table.ans{width:100%;border-collapse:collapse;font-size:12.8px;margin:10px 0 4px;}
+  table.ans td{padding:5px 8px;border-bottom:1px solid #E6EAEE;vertical-align:top;}
+  table.ans td.ql{color:#4B5A66;width:38%;}
+  table.ans td.qv{color:#16212B;font-weight:500;}
+  table.ans.wide th{text-align:left;font-size:11px;color:#4B5A66;padding:6px 8px;border-bottom:1px solid #D6DDE3;}
+  table.ans.wide td{font-size:12px;}
+  .rsec{background:#fff;border:1px solid #D6DDE3;border-radius:4px;padding:18px 22px;margin-bottom:14px;}
+  .empty{color:#93A2AC;font-style:italic;font-size:12.5px;}
+  .summary-block h3{font-size:14px;margin-top:18px;}
+  .summary-block .txt{white-space:pre-line;font-size:13px;}
+  .foot{margin-top:50px;font-size:11px;color:#93A2AC;border-top:1px solid #D6DDE3;padding-top:14px;}
+  @media print{ body{background:#fff;} .rsec,.scorebox,.rankbox{border:1px solid #ccc;} }
+</style></head>
+<body><div class="wrap">
+  <div class="cover">
+    <div class="k">DIAGNÓSTICO EXECUTIVO DE OPERAÇÕES DE TI</div>
+    <h1>${esc(empresa)}</h1>
+    <div class="meta">Documento gerado em ${dateStr} · Diagnóstico Estratégico de Operações de TI</div>
+  </div>
+
+  <h2>1. Painel de maturidade</h2>
+  <div class="scorebox"><div><div class="num">${overall!==null?overall.toFixed(1):'—'}</div><div class="lbl">SCORE GERAL (1–5)</div></div>
+  <div style="font-size:13px;color:#4B5A66;">${overall!==null?levelEmoji(overall)+' '+levelLabel(overall):'Maturidade não calculada — nenhuma escala de 1 a 5 foi preenchida.'}</div></div>
+  ${barsHtml}
+  ${ranked.length?`<div class="rankbox"><strong>Top 5 prioridades</strong><ol>${rankHtml}</ol></div>`:''}
+
+  <h2>2. Resumo do diagnóstico</h2>
+  ${summaryHtml}
+
+  <h2>3. Classificação dos problemas identificados</h2>
+  ${problems.length? tableToHtml(['Problema','Área','Causa','Evidência','Impacto','Frequência','Risco','Esforço','Prioridade'], problems.map(p=>[p.problema,p.area,p.causa,p.evidencia,p.impacto,p.frequencia,p.risco,p.esforco,p.prioridade])) : '<p class="empty">Nenhum problema registrado.</p>'}
+
+  <h2>4. Plano de ação — 90 dias</h2>
+  ${planHtml}
+
+  <h2>5. Respostas completas por seção</h2>
+  ${sectionsHtml}
+
+  <div class="foot">Diagnóstico Estratégico de Operações de TI — documento gerado a partir das respostas coletadas em reunião de consultoria. Campos não preenchidos não foram inferidos e permanecem ausentes deste relatório.</div>
+</div></body></html>`;
+}
+
+document.getElementById('btnDownload').addEventListener('click', ()=>{
+  const html = buildReportHtml();
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const empresa = (answers.empresa_nome||'operacoes-ti').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  a.href = url;
+  a.download = `diagnostico-ti-${empresa||'relatorio'}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+updateProgress();
+</script>
+</body>
+</html>#   c o n s u l t o r 1  
+ 
